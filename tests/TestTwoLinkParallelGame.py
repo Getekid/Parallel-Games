@@ -1,6 +1,6 @@
 import unittest
 from sympy import symbols
-from ParallelGame import TwoLinkParallelGame
+from src import TwoLinkParallelGame
 
 
 class TestTwoLinkParallelGame(unittest.TestCase):

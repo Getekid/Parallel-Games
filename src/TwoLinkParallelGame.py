@@ -2,7 +2,7 @@ from sympy import symbols, solve, simplify
 
 
 class TwoLinkParallelGame:
-    """A class for the 2-link network parallel game."""
+    """A class for the 2-link parallel network (homogeneous) pricing game."""
 
     def __init__(self, affine_latencies):
         """Initiates the game class.
