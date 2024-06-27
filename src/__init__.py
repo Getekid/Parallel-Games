@@ -1,1 +1,1 @@
-from .TwoLinkParallelGame import TwoLinkParallelGame
+from .TwoLinkParallelGame import *

@@ -1,6 +1,6 @@
 import unittest
 from sympy import symbols
-from src import TwoLinkParallelGame
+from src import TwoLinkParallelGame, TwoLinkPricingGame
 
 
 class TestTwoLinkParallelGame(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestTwoLinkParallelGame(unittest.TestCase):
 
     def test_calculate_best_responses(self):
         a = symbols('a')
-        game = TwoLinkParallelGame([[1, 0], [a, 0]])
+        game = TwoLinkPricingGame([[1, 0], [a, 0]])
         br1 = [
             {'cond': game.t2 < a + 2, 'func': (game.t2 + a) / 2},
             {'cond': game.t2 >= a + 2, 'func': game.t2 - 1}

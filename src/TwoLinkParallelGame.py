@@ -2,7 +2,7 @@ from sympy import symbols, solve, simplify
 
 
 class TwoLinkParallelGame:
-    """A class for the 2-link parallel network (homogeneous) pricing game."""
+    """A class for the 2-link parallel network (homogeneous) game."""
 
     def __init__(self, affine_latencies):
         """Initiates the game class.
@@ -33,6 +33,10 @@ class TwoLinkParallelGame:
         if len(solution) == 1:
             self.x1 = solution[0]
             self.x2 = simplify(1 - self.x1)
+
+
+class TwoLinkPricingGame(TwoLinkParallelGame):
+    """A class for the 2-link parallel network (homogeneous) pricing game."""
 
     def calculate_best_responses(self):
         """Calculate the best responses for each player."""
