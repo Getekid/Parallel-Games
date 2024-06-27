@@ -20,8 +20,8 @@ class TestTwoLinkParallelGame(unittest.TestCase):
         br2 = Piecewise(((game.t1 + 1) / 2, game.t1 < 2 * a + 1), (game.t1 - a, game.t1 >= 2 * a + 1))
 
         game.calculate_best_responses()
-        self.assertEqual(game.br1, br1)
-        self.assertEqual(game.br2, br2)
+        self.assertEqual(br1, game.br1)
+        self.assertEqual(br2, game.br2)
 
     def test_approximate_pricing_equilibrium(self):
         game = TwoLinkPricingGame([[1, 0], [2, 0]])  # a = 2
