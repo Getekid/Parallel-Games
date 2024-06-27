@@ -1,14 +1,18 @@
 import unittest
-from sympy import symbols, Piecewise, nan
-from src import TwoLinkHeterogeneousGame
+from sympy import symbols, Piecewise
+from src import TwoLinkHeterogeneousGame, TwoLinkHeterogeneousPricingGame
 
 
 class TestTwoLinkHeterogeneousGame(unittest.TestCase):
+
+    def setUp(self):
+        self.a, self.p = symbols('a p', nonnegative=True)
+
     def test_calculate_equilibrium(self):
-        a2, a, p = symbols('a2 a p', nonnegative=True)
+        a2 = symbols('a2', nonnegative=True)
 
         # Game with a = 1.
-        game = TwoLinkHeterogeneousGame([[1, 0], [a2, 0]], a.subs(a, 1.0))
+        game = TwoLinkHeterogeneousGame([[1, 0], [a2, 0]], self.a.subs(self.a, 1.0))
         x1 = (game.t2 - game.t1 + a2) / (a2 + 1.0)
         x2 = (game.t1 - game.t2 + 1.0) / (a2 + 1.0)
         game.calculate_equilibrium()
@@ -16,7 +20,7 @@ class TestTwoLinkHeterogeneousGame(unittest.TestCase):
         self.assertEqual(x2, game.x2)
 
         # Game with a = 5.
-        game = TwoLinkHeterogeneousGame([[1, 0], [a2, 0]], a.subs(a, 5))
+        game = TwoLinkHeterogeneousGame([[1, 0], [a2, 0]], self.a.subs(self.a, 5))
         x21 = (5 * game.t2 - 5 * game.t1 + a2) / (a2 + 1)
         x22 = (5 * game.t1 - 5 * game.t2 + 1) / (a2 + 1)
         game.calculate_equilibrium()
@@ -34,7 +38,7 @@ class TestTwoLinkHeterogeneousGame(unittest.TestCase):
         # self.assertEqual(x2, game.x2)
 
         # Game with a = p.
-        game = TwoLinkHeterogeneousGame([[1, 0], [a2, 0]], p)
+        game = TwoLinkHeterogeneousGame([[1, 0], [a2, 0]], self.p)
         x1 = Piecewise(((game.t2 - game.t1 + a2) / (game.t2 - game.t1 + a2 + 1), game.t1 <= game.t2),
                        (a2 / (game.t1 - game.t2 + a2 + 1), True))
         x2 = Piecewise((1 / (game.t2 - game.t1 + a2 + 1), game.t1 <= game.t2),
@@ -44,7 +48,7 @@ class TestTwoLinkHeterogeneousGame(unittest.TestCase):
         self.assertEqual(x2, game.x2)
 
         # Game with a = p + 1.
-        game = TwoLinkHeterogeneousGame([[1, 0], [a2, 0]], p + 1)
+        game = TwoLinkHeterogeneousGame([[1, 0], [a2, 0]], self.p + 1)
         x1 = Piecewise(((2 * game.t2 - 2 * game.t1 + a2) / (game.t2 - game.t1 + a2 + 1), game.t1 <= game.t2),
                        ((game.t2 - game.t1 + a2) / (game.t1 - game.t2 + a2 + 1), True))
         x2 = Piecewise(((1 - game.t2 + game.t1) / (game.t2 - game.t1 + a2 + 1), game.t1 <= game.t2),
@@ -52,3 +56,22 @@ class TestTwoLinkHeterogeneousGame(unittest.TestCase):
         game.calculate_equilibrium()
         self.assertEqual(x1, game.x1)
         self.assertEqual(x2, game.x2)
+
+    def test_calculate_best_responses(self):
+        a2 = symbols('a2', nonnegative=True)
+
+        # Game with a = 1.
+        game = TwoLinkHeterogeneousPricingGame([[1, 0], [a2, 0]], self.a.subs(self.a, 1.0))
+        br1 = Piecewise((0.5 * (game.t2 + a2), game.t2 < a2 + 2.0), (1.0 * game.t2 - 1.0, True))
+        br2 = Piecewise((0.5 * (game.t1 + 1), game.t1 < 2.0 * a2 + 1.0), (1.0 * game.t1 - 1.0 * a2, True))
+        game.calculate_best_responses()
+        self.assertEqual(br1, game.br1)
+        self.assertEqual(br2, game.br2)
+
+        # Game with a = 5.
+        game = TwoLinkHeterogeneousPricingGame([[1, 0], [a2, 0]], self.a.subs(self.a, 5.0))
+        br1 = Piecewise((0.5 * game.t2 + 0.1 * a2, game.t2 < 0.2 * a2 + 0.4), (1.0 * game.t2 - 0.2, True))
+        br2 = Piecewise((0.5 * game.t1 + 0.1, game.t1 < 0.4 * a2 + 0.2), (1.0 * game.t1 - 0.2 * a2, True))
+        game.calculate_best_responses()
+        self.assertEqual(br1, game.br1)
+        self.assertEqual(br2, game.br2)
