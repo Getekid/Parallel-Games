@@ -68,3 +68,21 @@ class TwoLinkPricingGame(TwoLinkParallelGame):
         # Step 5: Combine the results.
         self.br1 = Piecewise((br1_1, br1_1_cond), (br1_2, br1_2_cond))
         self.br2 = Piecewise((br2_1, br2_1_cond), (br2_2, br2_2_cond))
+
+    def approximate_pricing_equilibrium(self, max_iter=50, init=(0, 0)):
+        """Approximate the pricing equilibrium.
+
+        Args:
+            max_iter (int): The maximum number of iterations.
+            init (tuple): The initial values for the tolls.
+
+        Returns:
+            tuple: The approximate pricing equilibrium.
+        """
+        if self.br1 is None or self.br2 is None:
+            return None
+
+        bt1, bt2 = init
+        for _ in range(max_iter):
+            bt1, bt2 = self.br1.subs(self.t2, bt2), self.br2.subs(self.t1, bt1)
+        return bt1, bt2

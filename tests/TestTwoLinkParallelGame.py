@@ -22,3 +22,17 @@ class TestTwoLinkParallelGame(unittest.TestCase):
         game.calculate_best_responses()
         self.assertEqual(game.br1, br1)
         self.assertEqual(game.br2, br2)
+
+    def test_approximate_pricing_equilibrium(self):
+        game = TwoLinkPricingGame([[1, 0], [2, 0]])  # a = 2
+        self.assertIsNone(game.approximate_pricing_equilibrium())
+
+        game.calculate_best_responses()
+        equilibrium = game.approximate_pricing_equilibrium()
+        # Expected equilibrium at ((2 * a + 1) / 3, (a + 2) / 3) for a = 2
+        self.assertAlmostEqual(5 / 3, equilibrium[0])
+        self.assertAlmostEqual(4 / 3, equilibrium[1])
+
+        equilibrium = game.approximate_pricing_equilibrium(max_iter=40, init=(1, 5))
+        self.assertAlmostEqual(5 / 3, equilibrium[0])
+        self.assertAlmostEqual(4 / 3, equilibrium[1])
