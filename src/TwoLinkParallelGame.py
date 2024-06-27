@@ -86,3 +86,32 @@ class TwoLinkPricingGame(TwoLinkParallelGame):
         for _ in range(max_iter):
             bt1, bt2 = self.br1.subs(self.t2, bt2), self.br2.subs(self.t1, bt1)
         return bt1, bt2
+
+    def plot_best_reponses(self, stop=10, step=0.1):
+        """Plot the best responses for each player.
+
+        Args:
+            stop (int): The stop value for the plot.
+            step (float): The step value for the plot.
+        """
+        import numpy as np
+        import matplotlib.pyplot as plt
+
+        y1 = np.linspace(0, stop, int(stop / step))
+        x1 = [self.br1.subs(self.t2, i) for i in y1]
+        plt.plot(x1, y1)
+        plt.xlabel('Toll Owner 1')
+
+        x2 = np.linspace(0, stop, int(stop / step))
+        y2 = [self.br2.subs(self.t1, i) for i in x2]
+        plt.plot(x2, y2)
+        plt.ylabel('Toll Owner 2')
+
+        # Also add the approximate pricing equilibrium.
+        equilibrium = self.approximate_pricing_equilibrium()
+        plt.plot(equilibrium[0], equilibrium[1], 'ro', label='Equilibrium at ({0}, {1})'.format(
+            round(equilibrium[0], 2), round(equilibrium[1], 2)
+        ))
+
+        plt.legend()
+        plt.show()
