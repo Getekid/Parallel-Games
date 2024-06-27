@@ -1,5 +1,5 @@
 import unittest
-from sympy import symbols
+from sympy import symbols, Piecewise
 from src import TwoLinkParallelGame, TwoLinkPricingGame
 
 
@@ -16,14 +16,8 @@ class TestTwoLinkParallelGame(unittest.TestCase):
     def test_calculate_best_responses(self):
         a = symbols('a')
         game = TwoLinkPricingGame([[1, 0], [a, 0]])
-        br1 = [
-            {'cond': game.t2 < a + 2, 'func': (game.t2 + a) / 2},
-            {'cond': game.t2 >= a + 2, 'func': game.t2 - 1}
-        ]
-        br2 = [
-            {'cond': game.t1 < 2 * a + 1, 'func': (game.t1 + 1) / 2},
-            {'cond': game.t1 >= 2 * a + 1, 'func': game.t1 - a}
-        ]
+        br1 = Piecewise(((game.t2 + a) / 2, game.t2 < a + 2), (game.t2 - 1, game.t2 >= a + 2))
+        br2 = Piecewise(((game.t1 + 1) / 2, game.t1 < 2 * a + 1), (game.t1 - a, game.t1 >= 2 * a + 1))
 
         game.calculate_best_responses()
         self.assertEqual(game.br1, br1)

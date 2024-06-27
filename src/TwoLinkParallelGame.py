@@ -1,4 +1,4 @@
-from sympy import symbols, solve, simplify
+from sympy import symbols, solve, simplify, Piecewise
 
 
 class TwoLinkParallelGame:
@@ -66,11 +66,5 @@ class TwoLinkPricingGame(TwoLinkParallelGame):
         br2_2 = self.t1 - self.l2.subs('x1', 0)
 
         # Step 5: Combine the results.
-        self.br1 = [
-            {'cond': br1_1_cond, 'func': br1_1},
-            {'cond': br1_2_cond, 'func': br1_2}
-        ]
-        self.br2 = [
-            {'cond': br2_1_cond, 'func': br2_1},
-            {'cond': br2_2_cond, 'func': br2_2}
-        ]
+        self.br1 = Piecewise((br1_1, br1_1_cond), (br1_2, br1_2_cond))
+        self.br2 = Piecewise((br2_1, br2_1_cond), (br2_2, br2_2_cond))
