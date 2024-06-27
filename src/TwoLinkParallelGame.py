@@ -1,4 +1,4 @@
-from sympy import symbols, solve, simplify, Piecewise
+from sympy import symbols, solve, simplify, Piecewise, piecewise_fold, nan
 
 
 class TwoLinkParallelGame:
@@ -17,7 +17,7 @@ class TwoLinkParallelGame:
         self.l1 = a1 * self.x1 + b1
         self.l2 = a2 * self.x2 + b2
 
-        self.t1, self.t2 = symbols('t1 t2')
+        self.t1, self.t2 = symbols('t1 t2', nonnegative=True)
         self.c1 = self.l1 + self.t1
         self.c2 = self.l2 + self.t2
 
@@ -32,6 +32,11 @@ class TwoLinkParallelGame:
         solution = solve(self.c1 - self.c2, self.x1)
         if len(solution) == 1:
             self.x1 = solution[0]
+            self.x2 = simplify(1 - self.x1)
+        elif len(solution) > 1:
+            # Combine the solutions by adding them and replacing nan with 0.
+            solution = [sol.subs(nan, 0) for sol in solution]
+            self.x1 = piecewise_fold(sum(solution))
             self.x2 = simplify(1 - self.x1)
 
 
