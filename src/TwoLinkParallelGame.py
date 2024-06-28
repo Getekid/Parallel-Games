@@ -92,31 +92,93 @@ class TwoLinkPricingGame(TwoLinkParallelGame):
             bt1, bt2 = self.br1.subs(self.t2, bt2), self.br2.subs(self.t1, bt1)
         return bt1, bt2
 
-    def plot_best_reponses(self, stop=10, step=0.1):
+    def plot_profit_functions(self, stop=10, step=0.1, ax1=None, ax2=None):
+        """Plot the profit functions for each player.
+
+        Args:
+            stop (int): The stop value for the plot.
+            step (float): The step value for the plot.
+            ax1 (Axes): Optional. The first axes to plot on.
+            ax2 (Axes): Optional. The second axes to plot on.
+
+        Returns:
+            list: The two axes for the plot.
+        """
+        import numpy as np
+        import matplotlib.pyplot as plt
+
+        if ax1 is None or ax2 is None:
+            _, [_ax1, _ax2] = plt.subplots(1, 2, figsize=(12, 6))
+            ax1 = _ax1 if ax1 is None else ax1
+            ax2 = _ax2 if ax2 is None else ax2
+        t = np.linspace(0, stop, int(stop / step))
+
+        ax1.set_title('Profit for Toll Owner 1')
+        p1 = [self.x1.subs([(self.t2, stop / 2), (self.t1, i)]) * i for i in t]
+        ax1.plot(t, p1)
+        ax1.legend([f't2={stop / 2}'])
+
+        ax2.set_title('Profit for Toll Owner 2')
+        p2 = [self.x2.subs([(self.t1, stop / 2), (self.t2, i)]) * i for i in t]
+        ax2.plot(t, p2)
+        ax2.legend([f't1={stop / 2}'])
+
+        return [ax1, ax2]
+
+    def plot_best_reponses(self, stop=10, step=0.1, ax=None):
         """Plot the best responses for each player.
 
         Args:
             stop (int): The stop value for the plot.
             step (float): The step value for the plot.
+            ax (Axes): Optional. The axes to plot on.
+
+        Returns:
+            Axes: The axis for the plot.
         """
         import numpy as np
         import matplotlib.pyplot as plt
 
-        y1 = np.linspace(0, stop, int(stop / step))
-        x1 = [self.br1.subs(self.t2, i) for i in y1]
-        plt.plot(x1, y1)
-        plt.xlabel('Toll Owner 1')
+        if ax is None:
+            _, ax = plt.subplots(figsize=(6, 6))
+        ax.set_title('Best Responses')
 
-        x2 = np.linspace(0, stop, int(stop / step))
-        y2 = [self.br2.subs(self.t1, i) for i in x2]
-        plt.plot(x2, y2)
-        plt.ylabel('Toll Owner 2')
+        t2 = np.linspace(0, stop, int(stop / step))
+        t1 = [self.br1.subs(self.t2, i) for i in t2]
+        ax.plot(t1, t2)
+        ax.set_xlabel('Toll Owner 1')
+
+        t1 = np.linspace(0, stop, int(stop / step))
+        t2 = [self.br2.subs(self.t1, i) for i in t1]
+        ax.plot(t1, t2)
+        ax.set_ylabel('Toll Owner 2')
 
         # Also add the approximate pricing equilibrium.
         equilibrium = self.approximate_pricing_equilibrium()
-        plt.plot(equilibrium[0], equilibrium[1], 'ro', label='Equilibrium at ({0}, {1})'.format(
+        ax.plot(equilibrium[0], equilibrium[1], 'ro', label='Equilibrium at ({0}, {1})'.format(
             round(equilibrium[0], 2), round(equilibrium[1], 2)
         ))
 
-        plt.legend()
+        ax.legend()
+        return ax
+
+    def analyse(self, stop=10, step=0.1):
+        """Analyse the game.
+
+        Args:
+            stop (int): The stop value for the plot.
+            step (float): The step value for the plot.
+        """
+        import matplotlib.pyplot as plt
+
+        fig = plt.figure(figsize=(12, 12), constrained_layout=True)
+        gs = fig.add_gridspec(4, 4)
+        ax1 = fig.add_subplot(gs[:2, :2])
+        ax2 = fig.add_subplot(gs[:2, 2:])
+        ax3 = fig.add_subplot(gs[2:, 1:3])
+
+        self.calculate_best_responses()
+        self.plot_profit_functions(stop, step, ax1, ax2)
+        self.plot_best_reponses(stop, step, ax3)
+
         plt.show()
