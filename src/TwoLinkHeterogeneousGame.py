@@ -39,12 +39,14 @@ class TwoLinkHeterogeneousPricingGame(TwoLinkHeterogeneousGame, TwoLinkPricingGa
         self.calculate_equilibrium()
 
         # Step 2: Calculate the argmax for each profit function (differentiate, find root and solve for t).
-        p1 = self.x1 * self.t1
-        p2 = self.x2 * self.t2
-        br1 = solve(p1.diff(self.t1), self.t1)
-        br2 = solve(p2.diff(self.t2), self.t2)
+        pr1 = self.x1 * self.t1
+        pr2 = self.x2 * self.t2
+        br1 = solve(pr1.diff(self.t1), self.t1)
+        br2 = solve(pr2.diff(self.t2), self.t2)
         if len(br1) == 0 or len(br2) == 0:
             return
+
+        # TODO: All further steps are duplicated for player 1 and 2, consider refactoring.
 
         # Step 3: Prepare the Piecewise functions for the best responses, handle complements and intersections.
 
@@ -64,17 +66,33 @@ class TwoLinkHeterogeneousPricingGame(TwoLinkHeterogeneousGame, TwoLinkPricingGa
         if complement2 != S.EmptySet:
             br2.append((self.t1, complement2))
 
-        # TODO: If some intervals overlap, handle them.
-        intersection1 = Intersection(*br1_intervals)
-        if intersection1 != S.EmptySet:
-            pass
-        intersection2 = Intersection(*br2_intervals)
-        if intersection2 != S.EmptySet:
-            pass
+        # Order by interval, first the lower bound and then the higher one.
+        br1.sort(key=lambda pair: (pair[1].start, pair[1].end))
+        br2.sort(key=lambda pair: (pair[1].start, pair[1].end))
 
-        # Intervals should be disjoint, so order them by the lower bound.
-        br1.sort(key=lambda pair: pair[1].start)
-        br2.sort(key=lambda pair: pair[1].start)
+        # If any two intervals overlap, it will be consecutive ones.
+        # Find where the two expressions are equal and split the interval there.
+        # I should have only one solution in the intersection interval.
+        for i in range(len(br1) - 1):
+            intersection1 = Intersection(br1[i][1], br1[i + 1][1])
+            if intersection1 == S.EmptySet:
+                continue
+            solutions = solve(pr1.subs(self.t1, br1[i][0]) - pr1.subs(self.t1, br1[i + 1][0]), self.t2)
+            for solution in solutions:
+                if intersection1.contains(solution):
+                    br1[i] = (br1[i][0], Interval(br1[i][1].start, solution))
+                    br1[i + 1] = (br1[i + 1][0], Interval.open(solution, br1[i + 1][1].end))
+                    break
+        for i in range(len(br2) - 1):
+            intersection2 = Intersection(br2[i][1], br2[i + 1][1])
+            if intersection2 == S.EmptySet:
+                continue
+            solutions = solve(pr2.subs(self.t2, br2[i][0]) - pr2.subs(self.t2, br2[i + 1][0]), self.t1)
+            for solution in solutions:
+                if intersection2.contains(solution):
+                    br2[i] = (br2[i][0], Interval(br2[i][1].start, solution))
+                    br2[i + 1] = (br2[i + 1][0], Interval.open(solution, br2[i + 1][1].end))
+                    break
 
         # Step 4: Calculate the limit and best response of the above argmax,
         # i.e. the argmax and best response results when the player is controlling all the flow.

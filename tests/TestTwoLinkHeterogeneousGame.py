@@ -76,7 +76,7 @@ class TestTwoLinkHeterogeneousGame(unittest.TestCase):
         self.assertEqual(br1, game.br1)
         self.assertEqual(br2, game.br2)
 
-        # Game with a = p.
+        # Game with a = p + 1.
         game = TwoLinkHeterogeneousPricingGame([[1, 0], [2, 0]], self.p + 1)
         br1 = Piecewise(
             (sqrt(5 * (3 - game.t2)) - 3 + game.t2, game.t2 < Rational(6, 5)),
@@ -84,9 +84,9 @@ class TestTwoLinkHeterogeneousGame(unittest.TestCase):
             (game.t2 + 3 - sqrt(2 * game.t2 + 6), game.t2 <= 5),
             (game.t2 - 1, game.t2 > 5)
         )
-        num = 2 / 9 * sqrt(22 - 4 * sqrt(10))
+        num = sqrt(Rational(88, 81) - 16 * sqrt(10) / 81)
         br2 = Piecewise(
-            (2 * sqrt(3 - game.t1) - 3 + game.t1, game.t1 < num),
+            (2 * sqrt(3 - game.t1) - 3 + game.t1, game.t1 <= num),
             (game.t1 + 3 - sqrt(10 * game.t1 + 30) / 2, game.t1 <= 7),
             (game.t1 - 2, game.t1 > 7)
         )
