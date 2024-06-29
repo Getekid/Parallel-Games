@@ -92,7 +92,7 @@ class TwoLinkPricingGame(TwoLinkParallelGame):
 
         bt1, bt2 = init
         for _ in range(max_iter):
-            bt1, bt2 = self.br1.subs(self.t2, bt2), self.br2.subs(self.t1, bt1)
+            bt1, bt2 = self.br1.subs(self.t2, bt2).evalf(), self.br2.subs(self.t1, bt1).evalf()
         return bt1, bt2
 
     def plot_profit_functions(self, stop=10, step=0.1, ax1=None, ax2=None):
@@ -109,6 +109,11 @@ class TwoLinkPricingGame(TwoLinkParallelGame):
         """
         import numpy as np
         import matplotlib.pyplot as plt
+
+        if self.x1 in self.x1.free_symbols or self.x2 in self.x2.free_symbols:
+            print("Calculating equilibrium...")
+            self.calculate_equilibrium()
+            print("Equilibrium calculated.")
 
         if ax1 is None or ax2 is None:
             _, [_ax1, _ax2] = plt.subplots(1, 2, figsize=(12, 6))
@@ -128,7 +133,7 @@ class TwoLinkPricingGame(TwoLinkParallelGame):
 
         return [ax1, ax2]
 
-    def plot_best_reponses(self, stop=10, step=0.1, ax=None):
+    def plot_best_responses(self, stop=10, step=0.1, ax=None):
         """Plot the best responses for each player.
 
         Args:
@@ -141,6 +146,11 @@ class TwoLinkPricingGame(TwoLinkParallelGame):
         """
         import numpy as np
         import matplotlib.pyplot as plt
+
+        if self.br1 is None or self.br2 is None:
+            print("Calculating best responses...")
+            self.calculate_best_responses()
+            print("Best responses calculated.")
 
         if ax is None:
             _, ax = plt.subplots(figsize=(6, 6))
@@ -165,6 +175,21 @@ class TwoLinkPricingGame(TwoLinkParallelGame):
         ax.legend()
         return ax
 
+    def print_latex(self):
+        """Print the game in LaTeX format."""
+        from sympy import latex
+
+        print(f"\\begin{{align*}}")
+        # print(f"\\text{{Player 1: }} & \\text{{Latency: }} {latex(self.l1)} \\\\")
+        # print(f"\\text{{Player 2: }} & \\text{{Latency: }} {latex(self.l2)} \\\\")
+        # print(f"\\text{{Player 1: }} & \\text{{Cost: }} {latex(self.c1)} \\\\")
+        # print(f"\\text{{Player 2: }} & \\text{{Cost: }} {latex(self.c2)} \\\\")
+        print(f"x_1 &= {latex(self.x1)} \\\\")
+        print(f"x_2 &= {latex(self.x2)} \\\\")
+        print(f"BR_1 &= {latex(self.br1)} \\\\") if self.br1 is not None else None
+        print(f"BR_2 &= {latex(self.br2)} \\\\") if self.br2 is not None else None
+        print(f"\\end{{align*}}")
+
     def analyse(self, stop=10, step=0.1):
         """Analyse the game.
 
@@ -180,8 +205,16 @@ class TwoLinkPricingGame(TwoLinkParallelGame):
         ax2 = fig.add_subplot(gs[:2, 2:])
         ax3 = fig.add_subplot(gs[2:, 1:3])
 
-        self.calculate_best_responses()
+        print("Plotting profit functions...")
         self.plot_profit_functions(stop, step, ax1, ax2)
-        self.plot_best_reponses(stop, step, ax3)
+        print("Profit functions plotted.")
+
+        print("Plotting best responses...")
+        self.plot_best_responses(stop, step, ax3)
+        print("Best responses plotted.")
+
+        print("Printing the game in LaTeX format...")
+        self.print_latex()
+        print("LaTeX format printed.")
 
         plt.show()

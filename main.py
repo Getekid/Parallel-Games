@@ -1,6 +1,11 @@
-from src import TwoLinkPricingGame
+from sympy import symbols
+from src import TwoLinkHeterogeneousPricingGame
 
 if __name__ == '__main__':
-    game = TwoLinkPricingGame([[1, 0], [2, 0]])
-    game.calculate_best_responses()
-    game.analyse(stop=8)
+    p = symbols('p', nonnegative=True)
+    print("Initialising the game...")
+    game = TwoLinkHeterogeneousPricingGame([[1, 0], [5, 0]], p + 1)
+    print("Initialisation complete.")
+    print("Analysing the game...")
+    game.analyse(stop=5, step=0.001)
+    print("Analysis complete.")
