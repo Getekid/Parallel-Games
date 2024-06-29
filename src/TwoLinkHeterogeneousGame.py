@@ -1,4 +1,4 @@
-from sympy import symbols, Piecewise, solve
+from sympy import symbols, Piecewise, solve, false, simplify
 from src import TwoLinkParallelGame, TwoLinkPricingGame
 
 
@@ -42,25 +42,51 @@ class TwoLinkHeterogeneousPricingGame(TwoLinkHeterogeneousGame, TwoLinkPricingGa
         # Step 2: Calculate the argmax for each profit function (differentiate, find root and solve for t).
         p1 = self.x1 * self.t1
         p2 = self.x2 * self.t2
-        br1_1 = solve(p1.diff(self.t1), self.t1)
-        br2_1 = solve(p2.diff(self.t2), self.t2)
-        if len(br1_1) != 1 or len(br2_1) != 1:
+        br1 = solve(p1.diff(self.t1), self.t1)
+        br2 = solve(p2.diff(self.t2), self.t2)
+        if len(br1) == 0 or len(br2) == 0:
             return
-        br1_1, br2_1 = br1_1[0], br2_1[0]
+
+        # Since we know a_s is Piecewise, there will be multiple Piecewise solutions above.
+        # Each element of br1, br2 is a Piecewise function with a single (expr, cond) tuple and a (nan, True).
+        # Combine them by taking the first element from each Piecewise solution to form a single Piecewise function.
+        # Also solve the conditions to simplify them and reverse the order to make the lower conditions first.
+        br1 = [(br.args[0].expr, solve(br.args[0].cond, self.t2)) for br in reversed(br1)]
+        for i in range(len(br1)):
+            if br1[i][1] == false:
+                cond = self.t2 > 0
+                if i != len(br1) - 1 and br1[i + 1][1] != false and br1[i + 1][1].__class__.__name__ in ['LessThan', 'StrictLessThan']:
+                    cond = br1[i + 1][1].negated
+                br1[i] = (self.t2, cond)
+        br2 = [(br.args[0].expr, solve(br.args[0].cond, self.t1)) for br in reversed(br2)]
+        for i in range(len(br2)):
+            if br2[i][1] == false:
+                cond = self.t1 > 0
+                if i != len(br1) - 1 and br2[i + 1][1] != false and br2[i + 1][1].__class__.__name__ in ['LessThan', 'StrictLessThan']:
+                    cond = br2[i + 1][1].negated
+                br2[i] = (self.t1, cond)
 
         # Step 3: Calculate the limit of the above argmax,
         # i.e. the argmax results in the player controlling all the flow.
-        br1_1_cond = solve(self.x1.subs(self.t1, br1_1) - 1, self.t2)
-        br2_1_cond = solve(self.x2.subs(self.t2, br2_1) - 1, self.t1)
-        if len(br1_1_cond) != 1 or len(br2_1_cond) != 1:
+        # Use the Piecewise function element with the highest condition, i.e. the last one.
+        br1_max_cond = solve(self.x1.subs(self.t1, br1[-1][0]) - 1, self.t2)
+        br2_max_cond = solve(self.x2.subs(self.t2, br2[-1][0]) - 1, self.t1)
+        if len(br1_max_cond) != 1 or len(br2_max_cond) != 1:
             return
-        br1_1_cond, br1_2_cond = self.t2 < br1_1_cond[0], self.t2 >= br1_1_cond[0]
-        br2_1_cond, br2_2_cond = self.t1 < br2_1_cond[0], self.t1 >= br2_1_cond[0]
+        # br1_1_cond, br1_2_cond = self.t2 < br1_cond[0], self.t2 >= br1_cond[0]
+        # br2_1_cond, br2_2_cond = self.t1 < br2_cond[0], self.t1 >= br2_cond[0]
 
         # Step 4: Calculate the best response when the player controls all the flow.
-        br1_2 = (self.a_s * self.t2 - self.l1.subs('x1', 1)) / self.a_s
-        br2_2 = (self.a_s * self.t1 - self.l2.subs('x1', 0)) / self.a_s
+        # br1_2 = solve(self.c1.subs('x1', 1) - self.c2.subs(self.l2, 0), self.t1)[0]
+        # br2_2 = solve(self.c2.subs('x1', 0) - self.c1.subs(self.l1, 0), self.t2)[0]
+        br1_max = (self.a_s.args[1].expr.subs('x1', 1) * self.t2 - self.l1.subs('x1', 1)) / self.a_s.args[1].expr.subs('x1', 1)
+        br2_max = (self.a_s.args[0].expr.subs('x1', 0) * self.t1 - self.l2.subs('x1', 0)) / self.a_s.args[0].expr.subs('x1', 0)
 
-        # Step 5: Combine the results.
-        self.br1 = Piecewise((br1_1, br1_1_cond), (br1_2, br1_2_cond))
-        self.br2 = Piecewise((br2_1, br2_1_cond), (br2_2, br2_2_cond))
+        br1[-1] = (br1[-1][0], self.t2 <= br1_max_cond[0])
+        br1.append((br1_max, self.t2 > br1_max_cond[0]))
+        br2[-1] = (br2[-1][0], self.t1 <= br2_max_cond[0])
+        br2.append((br2_max, self.t1 > br2_max_cond[0]))
+
+        # Step 5: Combine the results to a single Piecewise function.
+        self.br1 = simplify(Piecewise(*br1))
+        self.br2 = simplify(Piecewise(*br2))
