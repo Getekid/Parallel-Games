@@ -62,16 +62,16 @@ class TestTwoLinkHeterogeneousGame(unittest.TestCase):
 
         # Game with a = 1.
         game = TwoLinkHeterogeneousPricingGame([[1, 0], [a2, 0]], self.a.subs(self.a, 1.0))
-        br1 = Piecewise((0.5 * (game.t2 + a2), game.t2 < a2 + 2.0), (1.0 * game.t2 - 1.0, True))
-        br2 = Piecewise((0.5 * (game.t1 + 1), game.t1 < 2.0 * a2 + 1.0), (1.0 * game.t1 - 1.0 * a2, True))
+        br1 = Piecewise((0.5 * (game.t2 + a2), game.t2 < a2 + 2.0), (game.t2 - 1.0, True))
+        br2 = Piecewise((0.5 * (game.t1 + 1), game.t1 < 2.0 * a2 + 1.0), (game.t1 - a2, True))
         game.calculate_best_responses()
         self.assertEqual(br1, game.br1)
         self.assertEqual(br2, game.br2)
 
         # Game with a = 5.
         game = TwoLinkHeterogeneousPricingGame([[1, 0], [a2, 0]], self.a.subs(self.a, 5.0))
-        br1 = Piecewise((0.5 * game.t2 + 0.1 * a2, game.t2 < 0.2 * a2 + 0.4), (1.0 * game.t2 - 0.2, True))
-        br2 = Piecewise((0.5 * game.t1 + 0.1, game.t1 < 0.4 * a2 + 0.2), (1.0 * game.t1 - 0.2 * a2, True))
+        br1 = Piecewise((0.5 * game.t2 + 0.1 * a2, game.t2 < 0.2 * a2 + 0.4), (game.t2 - 0.2, True))
+        br2 = Piecewise((0.5 * game.t1 + 0.1, game.t1 < 0.4 * a2 + 0.2), (game.t1 - 0.2 * a2, True))
         game.calculate_best_responses()
         self.assertEqual(br1, game.br1)
         self.assertEqual(br2, game.br2)

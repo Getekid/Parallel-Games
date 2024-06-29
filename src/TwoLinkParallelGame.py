@@ -67,8 +67,11 @@ class TwoLinkPricingGame(TwoLinkParallelGame):
         br2_1_cond, br2_2_cond = self.t1 < br2_1_cond[0], self.t1 >= br2_1_cond[0]
 
         # Step 4: Calculate the best response when the player controls all the flow.
-        br1_2 = self.t2 - self.l1.subs('x1', 1)
-        br2_2 = self.t1 - self.l2.subs('x1', 0)
+        # br1_2 = self.t2 - self.l1.subs('x1', 1)
+        # br2_2 = self.t1 - self.l2.subs('x1', 0)
+        # More fancy way to calculate the best response, useful when child classes are using it.
+        br1_2 = solve(self.c1.subs('x1', 1) - self.c2.subs(self.l2, 0), self.t1)[0]
+        br2_2 = solve(self.c2.subs('x1', 0) - self.c1.subs(self.l1, 0), self.t2)[0]
 
         # Step 5: Combine the results.
         self.br1 = Piecewise((br1_1, br1_1_cond), (br1_2, br1_2_cond))

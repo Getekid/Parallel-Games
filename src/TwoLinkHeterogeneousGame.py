@@ -30,6 +30,12 @@ class TwoLinkHeterogeneousPricingGame(TwoLinkHeterogeneousGame, TwoLinkPricingGa
             Currently same implementation as the TwoLinkPricingGame, instead of Step 4
         """
         # TODO: Implement the method.
+        # If the time-money sensitivity function is not piecewise,
+        # the game is equivalent to a TwoLinkPricingGame, so use that implementation.
+        if not self.a_s.is_Piecewise:
+            super().calculate_best_responses()
+            return
+
         # Step 1: Calculate the optimal flow x at which there is an equilibrium.
         self.calculate_equilibrium()
 
