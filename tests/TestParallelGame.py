@@ -14,3 +14,8 @@ class TestParallelGame(unittest.TestCase):
         game = ParallelGame([[2, 0], [1, 1], [1, 1]])
         np.testing.assert_array_equal(game.get_flow(), [3/5, 1/5, 1/5])
         np.testing.assert_array_equal(game.get_flow([3/4, 2/4, 1/4]), [0.45, 0.15, 0.4 ])
+
+    @staticmethod
+    def test_get_pricing_equilibrium():
+        game = ParallelGame([[2, 0], [1, 1], [1, 1]])
+        np.testing.assert_array_equal(game.get_pricing_equilibrium(), [1, 1 / 2, 1 / 2])
