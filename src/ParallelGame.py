@@ -32,12 +32,14 @@ class ParallelGame:
             (np.array): Flow Wardrop equilibrium.
         """
         tolls = np.array(tolls) if tolls is not None else np.zeros(self.n)
+        a = self.latencies[:, 0]
+        b = self.latencies[:, 1]
 
-        flow = np.zeros(self.n)
-        for i in range(self.n):
-            num = 1 + np.array([(self.latencies[j][1] + tolls[j] - self.latencies[i][1] - tolls[i]) / self.latencies[j][0] for j in range(self.n)]).sum()
-            den = np.array([self.latencies[i][0] / self.latencies[j][0] for j in range(self.n)]).sum()
-            flow[i] = num / den
+        # Using formula x_i(t) = (1 + sum((b_j+t_j-b_i-t_i)/a_j for all j)) / sum(a_i/a_j for all j).
+        inv_a = 1 / a
+        num = 1 + ((b + tolls) * inv_a).sum() - (b + tolls) * inv_a.sum()
+        den = a * inv_a.sum()
+        flow = num / den
 
         # If any of the flow elements are negative, remove them and re-calculate.
         # Do so by assuming a sub-game with only the non-negative flow links.
@@ -55,18 +57,21 @@ class ParallelGame:
         Returns:
             (np.array): The set of tolls that are the Nash Equilibrium for the pricing game.
         """
+        a = self.latencies[:, 0]
+        b = self.latencies[:, 1]
+
         # Default factor for t_i is -1/a_i.
-        toll_factors = np.tile(-1 / self.latencies[:, 0], (self.n, 1))
+        toll_factors = np.tile(-1 / a, (self.n, 1))
 
         # Factor for t_i in i-th row is 2 * sum(1/a_j when j != i).
-        inv_a = 1 / self.latencies[:, 0]
-        inv_a = inv_a.sum() - inv_a
-        np.fill_diagonal(toll_factors, 2 * inv_a)
+        inv_a = 1 / a
+        inv_a_comp_sum = inv_a.sum() - inv_a  # Each element is the sum of the remaining ones.
+        np.fill_diagonal(toll_factors, 2 * inv_a_comp_sum)
 
         # Constants are 1 + sum((b_j-b_i)/a_j when j != i).
-        b_a = self.latencies[:, 1] / self.latencies[:, 0]
-        b_a = b_a.sum() - b_a
-        constants = 1 + b_a - self.latencies[:, 1] * inv_a
+        b_a = b / a
+        b_a_comp_sum = b_a.sum() - b_a  # Each element is the sum of the remaining ones.
+        constants = 1 + b_a_comp_sum - b * inv_a_comp_sum
 
         # Solve the system of linear equations and return the result.
         return np.linalg.solve(toll_factors, constants)
