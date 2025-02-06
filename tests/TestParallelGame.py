@@ -1,5 +1,5 @@
 import unittest
-from src import ParallelGame
+from src import ParallelGame, LinDistParallelGame
 import numpy as np
 
 
@@ -9,8 +9,10 @@ class TestParallelGame(unittest.TestCase):
         game = ParallelGame([[2, 0], [1, 1], [1, 2]])
         np.testing.assert_array_equal(game.get_flow(), [2 / 3, 1 / 3, 0])
         np.testing.assert_array_equal(game.get_flow([4, 2, 1]), [0, 1 / 2, 1 / 2])
+
         game = ParallelGame([[2, 0], [1, 1], [1, 0]])
         np.testing.assert_array_equal(game.get_flow(), [1 / 3, 0, 2 / 3])
+
         game = ParallelGame([[2, 0], [1, 1], [1, 1]])
         np.testing.assert_array_equal(game.get_flow(), [3 / 5, 1 / 5, 1 / 5])
         np.testing.assert_array_equal(game.get_flow([3 / 4, 2 / 4, 1 / 4]), [0.45, 0.15, 0.4])
@@ -33,3 +35,17 @@ class TestParallelGame(unittest.TestCase):
                 x_var = game.get_flow(t_var)
                 self.assertLessEqual(x_var[i] * t_var[i], profits[i],
                                      "Found larger profit for operator {i} for toll {toll}.".format(i=i, toll=t_var[i]))
+
+
+class TestLinDistParallelGame(unittest.TestCase):
+    @staticmethod
+    def test_get_flow():
+        game = LinDistParallelGame([[2, 0], [1, 1]], [1, 1])
+        np.testing.assert_array_equal(game.get_flow(), [2 / 3, 1 / 3])
+        np.testing.assert_array_equal(game.get_flow([3, 2]), [1 / 4, 3 / 4])
+
+        game = LinDistParallelGame([[2, 0], [1, 1], [1, 1]], [1, 1])
+        np.testing.assert_array_equal(game.get_flow(), [3 / 5, 1 / 5, 1 / 5])
+        np.testing.assert_array_equal(game.get_flow([4, 3, 5 / 2]), [1 / 18, 3 / 18, 14 / 18])
+        np.testing.assert_array_equal(game.get_flow([4, 3, 2]), [0, 0, 1])
+        np.testing.assert_array_equal(game.get_flow([4, 3, 1]), [0, 0, 1])
