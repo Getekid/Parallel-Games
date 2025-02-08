@@ -36,6 +36,10 @@ class TestParallelGame(unittest.TestCase):
                 self.assertLessEqual(x_var[i] * t_var[i], profits[i],
                                      "Found larger profit for operator {i} for toll {toll}.".format(i=i, toll=t_var[i]))
 
+    def test_appr_pricing_equilibrium(self):
+        game = ParallelGame([[2, 0], [1, 1], [1, 1]])
+        np.testing.assert_array_almost_equal(game.appr_pricing_equilibrium()[-1], [1, 1 / 2, 1 / 2], 4)
+
 
 class TestLinDistParallelGame(unittest.TestCase):
     @staticmethod

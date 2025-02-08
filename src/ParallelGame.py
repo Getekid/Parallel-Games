@@ -11,6 +11,8 @@ class ParallelGame:
     Methods:
         get_flow (tolls=None): Returns the Wardrop flow between links for given tolls.
         get_pricing_equilibrium: Calculates and returns the Nash Equilibrium for the pricing game on the parallel network.
+        appr_pricing_equilibrium (tolls_init=None, n_rounds=1000, n_samples=100): Calculates and returns
+            the approximate Nash Equilibrium for the pricing competition game on the parallel network.
     """
 
     def __init__(self, latencies):
@@ -76,9 +78,57 @@ class ParallelGame:
         # Solve the system of linear equations and return the result.
         return np.linalg.solve(toll_factors, constants)
 
+    def appr_pricing_equilibrium(self, tolls_init=None, n_rounds=1000, n_samples=100):
+        """Calculates and returns the approximate Nash Equilibrium
+            for the pricing competition game on the parallel network.
+
+        Args:
+            tolls_init (list|np.array): List of tolls to use in the first round.
+            n_rounds (int): The number of rounds to simulate. In each round,
+                all link operators take turns and change their toll to their best response one.
+            n_samples (int): The number of samples to check for profit.
+                Link operators in their turn will take samples to find a higher profit toll.
+
+        Returns:
+            (np.array): An list of the tolls played in each round.
+                If an equilibrium exists, the tolls sequence should converge to it.
+        """
+        a = self.latencies[:, 0]
+        b = self.latencies[:, 1]
+        tolls_rounds = np.zeros((n_rounds, self.n))
+        tolls = np.array(tolls_init) if tolls_init is not None else np.zeros(self.n)
+
+        for r in range(n_rounds):
+            for link in range(self.n):
+                flow = self.get_flow(tolls)
+                profits = flow * tolls
+                costs = a * flow + b + tolls
+                # l_i(0) + Max toll = max c_j.
+                max_toll = np.max(costs) - b[link]
+
+                # Generate two sets of samples.
+                # 1. Uniform over the toll min and max value.
+                # 2. Normal around the toll's current value.
+                rng = np.random.default_rng()
+                toll_samples = np.concatenate((rng.uniform(0, max_toll, n_samples),
+                                               rng.normal(tolls[link], 1 / r, n_samples)))
+                toll_samples[toll_samples < 0] *= -1
+
+                tolls_sample = tolls.copy()
+                for toll_sample in toll_samples:
+                    tolls_sample[link] = toll_sample
+                    profit_sample = self.get_flow(tolls_sample) * toll_sample
+                    if profits[link] < profit_sample[link]:
+                        profits[link] = profit_sample[link]
+                        tolls[link] = toll_sample
+
+            tolls_rounds[r] = tolls
+
+        return tolls_rounds
+
 
 class LinDistParallelGame(ParallelGame):
-    """n-link Heterogeneous Parallel Game class with linear distribution function..
+    """n-link Heterogeneous Parallel Game class with linear distribution function.
 
         Attributes:
             n (int): The number of links in the parallel network.
