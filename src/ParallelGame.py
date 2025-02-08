@@ -78,7 +78,7 @@ class ParallelGame:
         # Solve the system of linear equations and return the result.
         return np.linalg.solve(toll_factors, constants)
 
-    def appr_pricing_equilibrium(self, tolls_init=None, n_rounds=1000, n_samples=100):
+    def appr_pricing_equilibrium(self, tolls_init=None, n_rounds=100, n_samples=10):
         """Calculates and returns the approximate Nash Equilibrium
             for the pricing competition game on the parallel network.
 
@@ -102,16 +102,16 @@ class ParallelGame:
             for link in range(self.n):
                 flow = self.get_flow(tolls)
                 profits = flow * tolls
-                costs = a * flow + b + tolls
+                costs_all_flow = a + b + tolls
                 # l_i(0) + Max toll = max c_j.
-                max_toll = np.max(costs) - b[link]
+                max_toll = np.max(costs_all_flow) - b[link]
 
                 # Generate two sets of samples.
                 # 1. Uniform over the toll min and max value.
                 # 2. Normal around the toll's current value.
                 rng = np.random.default_rng()
                 toll_samples = np.concatenate((rng.uniform(0, max_toll, n_samples),
-                                               rng.normal(tolls[link], 1 / r, n_samples)))
+                                               rng.normal(tolls[link], 1 / (max_toll + r), n_samples)))
                 toll_samples[toll_samples < 0] *= -1
 
                 tolls_sample = tolls.copy()
@@ -159,10 +159,10 @@ class LinDistParallelGame(ParallelGame):
         Returns:
             (np.array): Flow Wardrop equilibrium.
         """
-        if tolls is None or np.array_equal(tolls, np.zeros(self.n)) or self.n == 1:
+        tolls = np.array(tolls) if tolls is not None else np.zeros(self.n)
+        if np.all(tolls == tolls[0]) or self.n == 1:
             return super().get_flow(tolls)
 
-        tolls = np.array(tolls)
         a = self.latencies[:, 0]
         b = self.latencies[:, 1]
 
@@ -171,23 +171,33 @@ class LinDistParallelGame(ParallelGame):
         tolls_desc_indices = tolls.argsort()[::-1]
         tolls_desc_next_indices = np.roll(tolls_desc_indices, -1)
         toll_diffs = tolls[tolls_desc_indices] - tolls[tolls_desc_next_indices]
+        # For dividing with toll_diffs, replace 0 with 1 (to ignore this case).
+        toll_diffs_div = toll_diffs.copy()
+        toll_diffs_div[toll_diffs == 0] = 1
 
         flow_factors = np.zeros((self.n, self.n))
-        flow_factors[tolls_desc_indices, tolls_desc_indices] = a[tolls_desc_indices] / toll_diffs
-        flow_factors[tolls_desc_indices, tolls_desc_next_indices] = -1 * a[tolls_desc_next_indices] / toll_diffs
-        constants = (b[tolls_desc_next_indices] - b[tolls_desc_indices]) / toll_diffs
+        constants = np.zeros(self.n)
+        flow_factors[tolls_desc_indices, tolls_desc_indices] = a[tolls_desc_indices] / toll_diffs_div
+        flow_factors[tolls_desc_indices, tolls_desc_next_indices] = -1 * a[tolls_desc_next_indices] / toll_diffs_div
+        constants[tolls_desc_indices] = (b[tolls_desc_next_indices] - b[tolls_desc_indices]) / toll_diffs_div
 
         # a(p) is linear so a(p) = a * p + b for scalar and constant factors a, b.
         # First (ordered) link will have a(p) = a * x_1 + b, second one a(p) = a * (x_1 + x_2) + b, etc.
         # So add the dist scalar factor to the lower triangle of the ordered flow matrix.
         tril_indices = np.tril_indices(self.n)
-        flow_factors[tolls_desc_indices[tril_indices[0]], tolls_desc_indices[tril_indices[1]]] += self.dist[0]
-        # Also subtract the constant factor from the constants.
-        constants -= self.dist[1]
+        tril_tolls_desc_indices = (tolls_desc_indices[tril_indices[0]], tolls_desc_indices[tril_indices[1]])
+        #  Ignore when toll diff is 0.
+        toll_diffs_zero = tolls_desc_indices[toll_diffs == 0]
+        if len(toll_diffs_zero) > 0:
+            tril_zero = np.any(tril_tolls_desc_indices[0] == toll_diffs_zero[:, None], axis=0)
+            tril_tolls_desc_indices = (tril_tolls_desc_indices[0][~tril_zero], tril_tolls_desc_indices[1][~tril_zero])
+        flow_factors[tril_tolls_desc_indices] += self.dist[0]
+        # Also subtract the constant factor from the constants. Ignore when toll diff is 0.
+        constants[tolls_desc_indices] -= np.repeat(self.dist[1], self.n) * (toll_diffs != 0)
 
         # Fill in the last row with x1+x2+...+xn = 1.
-        flow_factors[-1] = np.ones(self.n)
-        constants[-1] = 1
+        flow_factors[tolls_desc_indices[-1]] = np.ones(self.n)
+        constants[tolls_desc_indices[-1]] = 1
         # Solve the system of linear equations
         flow = np.linalg.solve(flow_factors, constants)
 

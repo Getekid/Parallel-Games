@@ -36,7 +36,8 @@ class TestParallelGame(unittest.TestCase):
                 self.assertLessEqual(x_var[i] * t_var[i], profits[i],
                                      "Found larger profit for operator {i} for toll {toll}.".format(i=i, toll=t_var[i]))
 
-    def test_appr_pricing_equilibrium(self):
+    @staticmethod
+    def test_appr_pricing_equilibrium():
         game = ParallelGame([[2, 0], [1, 1], [1, 1]])
         np.testing.assert_array_almost_equal(game.appr_pricing_equilibrium()[-1], [1, 1 / 2, 1 / 2], 4)
 
@@ -46,10 +47,20 @@ class TestLinDistParallelGame(unittest.TestCase):
     def test_get_flow():
         game = LinDistParallelGame([[2, 0], [1, 1]], [1, 1])
         np.testing.assert_array_equal(game.get_flow(), [2 / 3, 1 / 3])
+        np.testing.assert_array_equal(game.get_flow([1, 1]), [2 / 3, 1 / 3])
         np.testing.assert_array_equal(game.get_flow([3, 2]), [1 / 4, 3 / 4])
 
         game = LinDistParallelGame([[2, 0], [1, 1], [1, 1]], [1, 1])
         np.testing.assert_array_equal(game.get_flow(), [3 / 5, 1 / 5, 1 / 5])
+        np.testing.assert_array_equal(game.get_flow([3, 3, 3]), [3 / 5, 1 / 5, 1 / 5])
         np.testing.assert_array_equal(game.get_flow([4, 3, 5 / 2]), [1 / 18, 3 / 18, 14 / 18])
+        np.testing.assert_array_almost_equal(game.get_flow([4, 3, 3]), [1 / 7, 3 / 7, 3 / 7], 10)
         np.testing.assert_array_equal(game.get_flow([4, 3, 2]), [0, 0, 1])
         np.testing.assert_array_equal(game.get_flow([4, 3, 1]), [0, 0, 1])
+
+    @staticmethod
+    def test_appr_pricing_equilibrium():
+        game = LinDistParallelGame([[2, 0], [1, 1], [1, 1]], [0, 1])
+        np.testing.assert_array_almost_equal(game.appr_pricing_equilibrium()[-1], [1, 1 / 2, 1 / 2], 4)
+        # game = LinDistParallelGame([[2, 0], [1, 1], [1, 1]], [1, 1])
+        # np.testing.assert_array_almost_equal(game.appr_pricing_equilibrium()[-1], [1, 1 / 2, 1 / 2], 4)
