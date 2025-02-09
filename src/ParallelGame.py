@@ -78,7 +78,7 @@ class ParallelGame:
         # Solve the system of linear equations and return the result.
         return np.linalg.solve(toll_factors, constants)
 
-    def appr_pricing_equilibrium(self, tolls_init=None, n_rounds=100, n_samples=10):
+    def appr_pricing_equilibrium(self, tolls_init=None, n_rounds=100, n_samples=100):
         """Calculates and returns the approximate Nash Equilibrium
             for the pricing competition game on the parallel network.
 

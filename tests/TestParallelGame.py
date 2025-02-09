@@ -60,7 +60,10 @@ class TestLinDistParallelGame(unittest.TestCase):
 
     @staticmethod
     def test_appr_pricing_equilibrium():
+        game = LinDistParallelGame([[1, 0], [2, 0]], [1, 1])
+        np.testing.assert_array_almost_equal(game.appr_pricing_equilibrium()[-1], [1.1464, 0.9268], 4)
+
         game = LinDistParallelGame([[2, 0], [1, 1], [1, 1]], [0, 1])
-        np.testing.assert_array_almost_equal(game.appr_pricing_equilibrium()[-1], [1, 1 / 2, 1 / 2], 4)
-        # game = LinDistParallelGame([[2, 0], [1, 1], [1, 1]], [1, 1])
-        # np.testing.assert_array_almost_equal(game.appr_pricing_equilibrium()[-1], [1, 1 / 2, 1 / 2], 4)
+        np.testing.assert_array_almost_equal(game.appr_pricing_equilibrium()[-1], [1, 1 / 2, 1 / 2])
+        game = LinDistParallelGame([[2, 0], [1, 1], [1, 1]], [1, 1])
+        np.testing.assert_array_almost_equal(game.appr_pricing_equilibrium()[-1], [0.77774878, 0.34034214, 0.33369089])
