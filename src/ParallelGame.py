@@ -3,6 +3,7 @@ import numpy as np
 
 class ParallelGame:
     """n-link Parallel Game class.
+        TODO: Add random seed.
 
     Attributes:
         n (int): The number of links in the parallel network.
@@ -136,7 +137,7 @@ class LinDistParallelGame(ParallelGame):
             dist (np.array): A list of factors for the linear distribution function.
 
         Methods:
-            get_flow (tolls=None): Returns the Wardrop flow between links for given tolls.
+            get_flow (tolls=None): Returns the Nash Equilibrium flow between links for given tolls.
             get_pricing_equilibrium: Calculates and returns the Nash Equilibrium for the pricing game on the parallel network.
         """
 
@@ -157,7 +158,7 @@ class LinDistParallelGame(ParallelGame):
             tolls (list|np.array): List of tolls to use.
 
         Returns:
-            (np.array): Flow Wardrop equilibrium.
+            (np.array): Flow Nash equilibrium.
         """
         tolls = np.array(tolls) if tolls is not None else np.zeros(self.n)
         if np.all(tolls == tolls[0]) or self.n == 1:
@@ -210,3 +211,139 @@ class LinDistParallelGame(ParallelGame):
             flow[flow_neg] = 0
 
         return flow
+
+
+class StepDistParallelGame(ParallelGame):
+    """n-link Heterogeneous Parallel Game class with step distribution function.
+
+        Attributes:
+            n (int): The number of links in the parallel network.
+            latencies (np.array): A list of factors for the latencies of each link.
+            dist_values (list|np.array): A list of increasing values for the step distribution function.
+            dist_cond (list|np.array): A list of increasing numbers in (0, 1) at which
+                the step distribution function changes values. Has size -1 of dist_values
+
+        Methods:
+            get_flow (tolls=None): Returns the Nash Equilibrium flow between links for given tolls.
+            get_pricing_equilibrium: Calculates and returns the Nash Equilibrium for the pricing game on the parallel network.
+            get_2_link_pricing_equilibrium: Calculates and returns the Nash Equilibrium
+                for the pricing game on a 2-link parallel network.
+        """
+
+    def __init__(self, latencies, dist_values=None, dist_cond=None):
+        """Initiates the game class.
+
+        Args:
+           latencies (list|np.array): An [a, b] list of the (affine) latency functions' factors.
+           dist_values (list|np.array): A list of increasing values for the step distribution function.
+           dist_cond (list|np.array): A list of increasing numbers in (0, 1) at which
+                the step distribution function changes values. Has size -1 of dist_values
+        """
+        super().__init__(latencies)
+        self.dist_values = np.array(dist_values) if dist_values is not None else np.array([0, 1])
+        self.dist_cond = np.array(dist_cond) if dist_cond is not None else np.linspace(0, 1, len(dist_values) + 1)[1:-1]
+
+    def get_step_value(self, player):
+        """Returns the step distribution function value for the given player.
+
+        Args:
+            player (Player): The player whose step distribution value to return.
+
+        Returns:
+            (np.float): The step distribution function value for the given player.
+        """
+        player = np.max((player, 0))
+        player = np.min((player, 1))
+        cond = player < self.dist_cond
+        return self.dist_values[-1 if not cond.any() else cond.argmax()]
+
+    def get_flow(self, tolls=None):
+        """Returns the flow Nash equilibrium for a given set of tolls.
+            Implemented only for 2-link networks.
+
+        Args:
+            tolls (list|np.array): List of tolls to use.
+
+        Returns:
+            (np.array): Flow Nash equilibrium.
+        """
+        tolls = np.array(tolls) if tolls is not None else np.zeros(self.n)
+        if np.all(tolls == tolls[0]) or self.n == 1:
+            return super().get_flow(tolls)
+        if self.n > 2:
+            raise "This method is not implemented for n > 2."
+
+        # The flow will correspond to a single step value, so search for it by applying the tolls to the
+        # respective pseudo-heterogeneous (tolls * ak) and keeping the one the flow matches (should be unique).
+        for k, ak in enumerate(self.dist_values):
+            flow = super().get_flow(ak * tolls)
+            flow_lower = flow[0] if tolls[0] > tolls[1] else flow[1]
+            if self.get_step_value(flow_lower) == ak:
+                return flow
+
+    def get_2_link_pricing_equilibrium(self):
+        """Calculates and returns the Nash Equilibrium
+            for the pricing game on a 2-link parallel network.
+
+        Returns:
+            (np.array|bool): The tolls that are the Nash equilibrium
+                for the 2-link pricing game, if it exists, or False otherwise.
+        """
+        if self.n != 2:
+            raise "This Algorithm is valid only for 2-link parallel games."
+        a1, a2 = self.latencies[:, 0]
+        b1, b2 = self.latencies[:, 1]
+
+        # Helper functions.
+        def toll_diff(a, x1):
+            return (1 / a) * ((a1 + a2) * x1 - a2 + b1 - b2)
+        def profit_1(a, t1, t2):
+            return (t1 / (a1 + a2)) * (a2 + b2 - b1 + a * (t2 - t1))
+        def profit_2(a, t1, t2):
+            return (t2 / (a1 + a2)) * (a1 + b1 - b2 + a * (t1 - t2))
+        def best_response_1(a, t2):
+            if t2 <= (1 / a) * (2 * a1 + a2 + b1 - b2):
+                return t2 / 2 + (1 / (2 * a)) * (a2 + b2 - b1)
+            else:
+                return t2 - (1 / a) * (a1 + b1 - b2)
+        def best_response_2(a, t1):
+            if t1 <= (1 / a) * (2 * a2 + a1 + b2 - b1):
+                return t1 / 2 + (1 / (2 * a)) * (a1 + b1 - b2)
+            else:
+                return t1 - (1 / a) * (a2 + b2 - b1)
+
+        # Algorithm.
+        t1_cand, t2_cand = (1 / 3) * (2 * a2 + a1 + b2 - b1), (1 / 3) * (2 * a1 + a2 + b1 - b2)
+        x1_ne, x2_ne = t1_cand / (a1 + a2), t2_cand / (a1 + a2)
+        split = self.get_step_value(x1_ne) if t1_cand > t2_cand else self.get_step_value(x2_ne)
+        t1_cand, t2_cand = t1_cand / split, t2_cand / split
+        pr1, pr2 = x1_ne * t1_cand, x2_ne * t2_cand
+
+        for k, ak in enumerate(self.dist_values):
+            if ak == split:
+                continue
+            t1k, t2k = best_response_1(ak, t2_cand), best_response_2(ak, t1_cand)
+            p_low = self.dist_cond[k - 1] if k != 0 else 0
+            p_high = self.dist_cond[k] if k != len(self.dist_values) else 1
+            t_low_low, t_low_high = toll_diff(ak, p_low), toll_diff(ak, p_high)
+            t_high_low, t_high_high = toll_diff(ak, 1 - p_high), toll_diff(ak, 1 - p_low)
+            t1k_low_low, t1k_low_high = t2_cand - t_low_low, t2_cand - t_low_high
+            t1k_high_low, t1k_high_high = t2_cand - t_high_low, t2_cand - t_high_high
+            t2k_low_low, t2k_low_high = t1_cand + t_low_low, t1_cand + t_low_high
+            t2k_high_low, t2k_high_high = t1_cand + t_high_low, t1_cand + t_high_high
+
+            if t1k_low_low <= t1k <= t1k_low_high or t1k_high_low <= t1k <= t1k_high_high:
+                pr1k = profit_1(ak, t1k, t2_cand)
+            else:
+                pr1k = np.max((profit_1(ak, t1k_low_low, t2_cand), profit_1(ak, t1k_low_high, t2_cand),
+                               profit_1(ak, t1k_high_low, t2_cand), profit_1(ak, t1k_high_high, t2_cand)))
+            if t2k_low_low <= t2k <= t2k_low_high or t2k_high_low <= t2k <= t2k_high_high:
+                pr2k = profit_2(ak, t2k, t1_cand)
+            else:
+                pr2k = np.max((profit_2(ak, t1_cand, t2k_low_low), profit_2(ak, t1_cand, t2k_low_high),
+                               profit_2(ak, t1_cand, t2k_high_low), profit_2(ak, t1_cand, t2k_high_high)))
+
+            if pr1k > pr1 or pr2k > pr2:
+                return False
+
+        return np.array([t1_cand, t2_cand])

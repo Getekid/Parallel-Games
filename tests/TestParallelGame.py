@@ -1,5 +1,5 @@
 import unittest
-from src import ParallelGame, LinDistParallelGame
+from src import ParallelGame, LinDistParallelGame, StepDistParallelGame
 import numpy as np
 
 
@@ -64,6 +64,33 @@ class TestLinDistParallelGame(unittest.TestCase):
         np.testing.assert_array_almost_equal(game.appr_pricing_equilibrium()[-1], [1.1464, 0.9268], 4)
 
         game = LinDistParallelGame([[2, 0], [1, 1], [1, 1]], [0, 1])
-        np.testing.assert_array_almost_equal(game.appr_pricing_equilibrium()[-1], [1, 1 / 2, 1 / 2])
+        np.testing.assert_array_almost_equal(game.appr_pricing_equilibrium()[-1], [1, 1 / 2, 1 / 2], 4)
+
+        # Next game can have 2 N.E. (0.77, 0.34, 0.33) and (0.77, 0.33, 0.34).
+        # TODO: Add random seed and assert that both can occur.
         game = LinDistParallelGame([[2, 0], [1, 1], [1, 1]], [1, 1])
-        np.testing.assert_array_almost_equal(game.appr_pricing_equilibrium()[-1], [0.77774878, 0.34034214, 0.33369089])
+        np.testing.assert_array_almost_equal(game.appr_pricing_equilibrium(n_rounds=200)[-1], [0.77774878, 0.34034214, 0.33369089])
+
+class TestStepDistParallelGame(unittest.TestCase):
+    @staticmethod
+    def test_get_flow():
+        game = StepDistParallelGame([[2, 0], [1, 1]], [3, 4], [1/4])
+        np.testing.assert_array_equal(game.get_flow(), [2 / 3, 1 / 3])
+        np.testing.assert_array_equal(game.get_flow([1, 1]), [2 / 3, 1 / 3])
+        np.testing.assert_array_equal(game.get_flow([3 / 4, 2 / 4]), [1 / 3, 2 / 3])
+
+    def test_get_step_value(self):
+        game = StepDistParallelGame([[2, 0], [1, 1]], [3, 4], [1/4])
+        self.assertEqual(game.get_step_value(-1), 3)
+        self.assertEqual(game.get_step_value(1 / 5), 3)
+        self.assertEqual(game.get_step_value(2 / 5), 4)
+        self.assertEqual(game.get_step_value(2), 4)
+
+    def test_get_2_link_pricing_equilibrium(self):
+        game = StepDistParallelGame([[2, 0], [1, 1]], [3, 4], [1/4])
+        pr_eq = game.get_2_link_pricing_equilibrium()
+        self.assertIsInstance(pr_eq, np.ndarray)
+        np.testing.assert_array_almost_equal(pr_eq, [5 / 12, 4 / 12])
+
+        game = StepDistParallelGame([[2, 0], [1, 1]], [2, 4], [1/4])
+        self.assertFalse(game.get_2_link_pricing_equilibrium())
