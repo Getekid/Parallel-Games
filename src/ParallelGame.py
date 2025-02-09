@@ -3,11 +3,11 @@ import numpy as np
 
 class ParallelGame:
     """n-link Parallel Game class.
-        TODO: Add random seed.
 
     Attributes:
         n (int): The number of links in the parallel network.
         latencies (np.array): A list of factors for the latencies of each link.
+        rng (np.random.RandomState): A random number generator.
 
     Methods:
         get_flow (tolls=None): Returns the Wardrop flow between links for given tolls.
@@ -16,14 +16,16 @@ class ParallelGame:
             the approximate Nash Equilibrium for the pricing competition game on the parallel network.
     """
 
-    def __init__(self, latencies):
+    def __init__(self, latencies, seed=None):
         """Initiates the game class.
 
         Args:
-           latencies (list|np.array): An [a, b] list of the (affine) latency functions' factors.
+            latencies (list|np.array): An [a, b] list of the (affine) latency functions' factors.
+            seed (int|None): An integer to be used as the seed for the random number generator, can be None.
         """
         self.n = len(latencies)
         self.latencies = np.array(latencies)
+        self.rng = np.random.default_rng(seed)
 
     def get_flow(self, tolls=None):
         """Returns the flow Wardrop equilibrium for a given set of tolls.
@@ -110,9 +112,8 @@ class ParallelGame:
                 # Generate two sets of samples.
                 # 1. Uniform over the toll min and max value.
                 # 2. Normal around the toll's current value.
-                rng = np.random.default_rng()
-                toll_samples = np.concatenate((rng.uniform(0, max_toll, n_samples),
-                                               rng.normal(tolls[link], 1 / (max_toll + r), n_samples)))
+                toll_samples = np.concatenate((self.rng.uniform(0, max_toll, n_samples),
+                                               self.rng.normal(tolls[link], 1 / (max_toll + r), n_samples)))
                 toll_samples[toll_samples < 0] *= -1
 
                 tolls_sample = tolls.copy()
@@ -134,6 +135,7 @@ class LinDistParallelGame(ParallelGame):
         Attributes:
             n (int): The number of links in the parallel network.
             latencies (np.array): A list of factors for the latencies of each link.
+            rng (np.random.RandomState): A random number generator.
             dist (np.array): A list of factors for the linear distribution function.
 
         Methods:
@@ -141,14 +143,15 @@ class LinDistParallelGame(ParallelGame):
             get_pricing_equilibrium: Calculates and returns the Nash Equilibrium for the pricing game on the parallel network.
         """
 
-    def __init__(self, latencies, dist=None):
+    def __init__(self, latencies, dist=None, seed=None):
         """Initiates the game class.
 
         Args:
-           latencies (list|np.array): An [a, b] list of the (affine) latency functions' factors.
-           dist (list|np.array): An [a, b] list of the linear distribution function's factors.
+            latencies (list|np.array): An [a, b] list of the (affine) latency functions' factors.
+            dist (list|np.array): An [a, b] list of the linear distribution function's factors.
+            seed (int|None): An integer to be used as the seed for the random number generator, can be None.
         """
-        super().__init__(latencies)
+        super().__init__(latencies, seed=seed)
         self.dist = np.array(dist) if dist is not None else np.array([0, 1])
 
     def get_flow(self, tolls=None):
@@ -219,6 +222,7 @@ class StepDistParallelGame(ParallelGame):
         Attributes:
             n (int): The number of links in the parallel network.
             latencies (np.array): A list of factors for the latencies of each link.
+            rng (np.random.RandomState): A random number generator.
             dist_values (list|np.array): A list of increasing values for the step distribution function.
             dist_cond (list|np.array): A list of increasing numbers in (0, 1) at which
                 the step distribution function changes values. Has size -1 of dist_values
@@ -230,16 +234,17 @@ class StepDistParallelGame(ParallelGame):
                 for the pricing game on a 2-link parallel network.
         """
 
-    def __init__(self, latencies, dist_values=None, dist_cond=None):
+    def __init__(self, latencies, dist_values=None, dist_cond=None, seed=None):
         """Initiates the game class.
 
         Args:
-           latencies (list|np.array): An [a, b] list of the (affine) latency functions' factors.
-           dist_values (list|np.array): A list of increasing values for the step distribution function.
-           dist_cond (list|np.array): A list of increasing numbers in (0, 1) at which
+            latencies (list|np.array): An [a, b] list of the (affine) latency functions' factors.
+            dist_values (list|np.array): A list of increasing values for the step distribution function.
+            dist_cond (list|np.array): A list of increasing numbers in (0, 1) at which
                 the step distribution function changes values. Has size -1 of dist_values
+            seed (int|None): An integer to be used as the seed for the random number generator, can be None.
         """
-        super().__init__(latencies)
+        super().__init__(latencies, seed=seed)
         self.dist_values = np.array(dist_values) if dist_values is not None else np.array([0, 1])
         self.dist_cond = np.array(dist_cond) if dist_cond is not None else np.linspace(0, 1, len(dist_values) + 1)[1:-1]
 
@@ -297,15 +302,19 @@ class StepDistParallelGame(ParallelGame):
         # Helper functions.
         def toll_diff(a, x1):
             return (1 / a) * ((a1 + a2) * x1 - a2 + b1 - b2)
+
         def profit_1(a, t1, t2):
             return (t1 / (a1 + a2)) * (a2 + b2 - b1 + a * (t2 - t1))
+
         def profit_2(a, t1, t2):
             return (t2 / (a1 + a2)) * (a1 + b1 - b2 + a * (t1 - t2))
+
         def best_response_1(a, t2):
             if t2 <= (1 / a) * (2 * a1 + a2 + b1 - b2):
                 return t2 / 2 + (1 / (2 * a)) * (a2 + b2 - b1)
             else:
                 return t2 - (1 / a) * (a1 + b1 - b2)
+
         def best_response_2(a, t1):
             if t1 <= (1 / a) * (2 * a2 + a1 + b2 - b1):
                 return t1 / 2 + (1 / (2 * a)) * (a1 + b1 - b2)
