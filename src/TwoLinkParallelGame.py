@@ -17,7 +17,7 @@ class TwoLinkParallelGame:
         self.l1 = a1 * self.x1 + b1
         self.l2 = a2 * self.x2 + b2
 
-        self.t1, self.t2 = symbols('t1 t2', nonnegative=True)
+        self.t1, self.t2 = symbols('t1 t2', real=True, nonnegative=True)
         self.c1 = self.l1 + self.t1
         self.c2 = self.l2 + self.t2
 
@@ -26,14 +26,16 @@ class TwoLinkParallelGame:
 
     def calculate_equilibrium(self):
         """Calculate the optimal flow x w.r.t. tolls (t1, t2) at which there is an equilibrium.
-            # Optimal flow occurs when the two links have the same cost.
-            # Use the expression c1 == c2, solve for x1 and store the resulting expression.
+            Optimal flow occurs when the two links have the same cost.
+            Use the expression c1 == c2, solve for x1 and store the resulting expression.
         """
         solution = solve(self.c1 - self.c2, self.x1)
         if len(solution) == 1:
             self.x1 = solution[0]
             self.x2 = simplify(1 - self.x1)
         elif len(solution) > 1:
+            # TODO: First remove the solutions that are not in the range [0, 1].
+
             # Combine the solutions by adding them and replacing nan with 0.
             solution = [sol.subs(nan, 0) for sol in solution]
             self.x1 = piecewise_fold(sum(solution))
