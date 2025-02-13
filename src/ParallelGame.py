@@ -93,7 +93,7 @@ class ParallelGame:
                 Link operators in their turn will take samples to find a higher profit toll.
 
         Returns:
-            (np.array): An list of the tolls played in each round.
+            (np.array): A list of the tolls played in each round.
                 If an equilibrium exists, the tolls sequence should converge to it.
         """
         a = self.latencies[:, 0]
